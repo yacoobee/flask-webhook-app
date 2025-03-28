@@ -1,0 +1,3 @@
+[console_scripts]
+postman2case = postman2case.cli:main
+

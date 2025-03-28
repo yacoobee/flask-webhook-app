@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Received Webhooks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .webhook-list {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .webhook-item {
+            background-color: #e8e8e8;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Received Webhooks</h1>
+    <div class="webhook-list">
+        {% if webhooks %}
+            {% for webhook in webhooks %}
+                <div class="webhook-item">{{ webhook | tojson(indent=2) }}</div>
+            {% endfor %}
+        {% else %}
+            <p>No webhooks received yet.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
