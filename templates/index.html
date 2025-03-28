@@ -3,44 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Received Webhooks</title>
+    <title>Webhook Viewer</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f9f9f9;
         }
-        h1 {
+        
+        h1, h2 { 
+            text-align: left; 
             color: #333;
         }
-        .webhook-list {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            margin-top: 20px;
+        
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
         }
-        .webhook-item {
-            background-color: #e8e8e8;
+
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        pre { 
+            text-align: left; 
+            background: #f4f4f4; 
+            padding: 10px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+        }
+
+        #webhooks { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            background: white;
             border-radius: 5px;
-            margin-bottom: 10px;
-            padding: 10px;
-            font-size: 14px;
-            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
-    <h1>Received Webhooks</h1>
-    <div class="webhook-list">
-        {% if webhooks %}
-            {% for webhook in webhooks %}
-                <div class="webhook-item">{{ webhook | tojson(indent=2) }}</div>
-            {% endfor %}
-        {% else %}
-            <p>No webhooks received yet.</p>
-        {% endif %}
+
+    <div class="container">
+        <h1>Live Webhook Data</h1>
+
+        <div class="button-container">
+            <button onclick="sendRequest('/clear')">Clear Webhooks</button>
+            <button onclick="window.location.href='/save'">Save to File</button>
+            <button onclick="sendRequest('/delete')">Delete All Records</button>
+        </div>
+
+        <h2>Received Webhooks</h2>
+        <div id="webhooks">
+            <p>Waiting for incoming webhooks...</p>
+        </div>
     </div>
+
+    <script>
+        const webhookDiv = document.getElementById('webhooks');
+        const eventSource = new EventSource('/stream');
+
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            const newEntry = document.createElement("pre");
+            newEntry.textContent = JSON.stringify(data, null, 4);
+            webhookDiv.insertBefore(newEntry, webhookDiv.firstChild);
+        };
+
+        function sendRequest(url) {
+            fetch(url, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    webhookDiv.innerHTML = "<p>Waiting for incoming webhooks...</p>";
+                });
+        }
+    </script>
+
 </body>
 </html>
