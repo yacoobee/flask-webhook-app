@@ -3,102 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webhook Viewer</title>
+    <title>Webhook Receiver</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            background-color: #f9f9f9;
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
         }
-        
-        h1, h2 { 
-            text-align: left; 
-            color: #333;
+        h2 {
+            margin-bottom: 10px;
         }
-        
         .button-container {
             display: flex;
             gap: 10px;
-            margin: 10px 0;
+            margin-bottom: 15px;
         }
-
         button {
-            padding: 10px 15px;
-            font-size: 16px;
-            border: none;
+            padding: 10px;
             border-radius: 20px;
+            border: none;
             background-color: #007bff;
             color: white;
             cursor: pointer;
-            transition: 0.3s;
         }
-
         button:hover {
             background-color: #0056b3;
         }
-
-        .container {
-            max-width: 800px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        #webhook-list {
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;  /* Ensures line breaks are respected */
         }
-
-        pre { 
-            text-align: left; 
-            background: #f4f4f4; 
-            padding: 10px; 
-            border-radius: 5px; 
-            overflow-x: auto; 
+        .webhook-item {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            font-family: 'Courier New', monospace; /* Monospaced font for better readability */
         }
-
-        #webhooks { 
-            max-height: 400px; 
-            overflow-y: auto; 
-            border: 1px solid #ccc; 
-            padding: 10px; 
-            background: white;
+        .webhook-item code {
+            background-color: #f4f4f4;
+            padding: 10px;
             border-radius: 5px;
+            display: block;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Live Webhook Data</h1>
+    <h2>Webhook Receiver</h2>
 
-        <div class="button-container">
-            <button onclick="sendRequest('/clear')">Clear Webhooks</button>
-            <button onclick="window.location.href='/save'">Save to File</button>
-            <button onclick="sendRequest('/delete')">Delete All Records</button>
-        </div>
-
-        <h2>Received Webhooks</h2>
-        <div id="webhooks">
-            <p>Waiting for incoming webhooks...</p>
-        </div>
+    <div class="button-container">
+        <button onclick="clearWebhooks()">Clear Webhooks</button>
+        <button onclick="saveWebhooks()">Download Webhooks</button>
+        <button onclick="deleteWebhooks()">Delete Webhooks</button>
     </div>
 
+    <h3>Received Webhooks</h3>
+    <div id="webhook-list"></div>
+
     <script>
-        const webhookDiv = document.getElementById('webhooks');
-        const eventSource = new EventSource('/stream');
-
-        eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            const newEntry = document.createElement("pre");
-            newEntry.textContent = JSON.stringify(data, null, 4);
-            webhookDiv.insertBefore(newEntry, webhookDiv.firstChild);
-        };
-
-        function sendRequest(url) {
-            fetch(url, { method: 'POST' })
+        function clearWebhooks() {
+            fetch('/clear', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
+                    document.getElementById('webhook-list').innerHTML = "";
                     alert(data.message);
-                    webhookDiv.innerHTML = "<p>Waiting for incoming webhooks...</p>";
+
+                    // Stop and restart the event stream
+                    eventSource.close();
+                    setTimeout(() => {
+                        eventSource = new EventSource('/stream');
+                        eventSource.onmessage = function(event) {
+                            let webhookList = document.getElementById('webhook-list');
+                            let newWebhook = document.createElement("div");
+                            newWebhook.classList.add("webhook-item");
+
+                            // Format the JSON data for display
+                            newWebhook.innerHTML = "<code>" + JSON.stringify(JSON.parse(event.data), null, 4) + "</code>";
+                            webhookList.appendChild(newWebhook);
+                        };
+                    }, 500);
+
+                    // Manually reload first webhook
+                    setTimeout(loadInitialWebhooks, 1000);
                 });
         }
+
+        function saveWebhooks() {
+            fetch('/save', { method: 'POST' })
+                .then(response => response.blob())
+                .then(blob => {
+                    let link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = "webhooks.txt";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+        }
+
+        function deleteWebhooks() {
+            fetch('/delete', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('webhook-list').innerHTML = "";
+                    alert(data.message);
+                });
+        }
+
+        function loadInitialWebhooks() {
+            fetch('/initial_webhooks')
+                .then(response => response.json())
+                .then(data => {
+                    let webhookList = document.getElementById('webhook-list');
+                    webhookList.innerHTML = "";  
+
+                    data.webhooks.forEach(webhook => {
+                        let newWebhook = document.createElement("div");
+                        newWebhook.classList.add("webhook-item");
+
+                        // Format the JSON data for display
+                        newWebhook.innerHTML = "<code>" + JSON.stringify(webhook, null, 4) + "</code>";
+                        webhookList.appendChild(newWebhook);
+                    });
+                });
+        }
+
+        // Load stored webhooks on page load
+        loadInitialWebhooks();
+
+        // Live Updates using SSE
+        const eventSource = new EventSource('/stream');
+        eventSource.onmessage = function(event) {
+            let webhookList = document.getElementById('webhook-list');
+            let newWebhook = document.createElement("div");
+            newWebhook.classList.add("webhook-item");
+
+            // Format the JSON data for display
+            newWebhook.innerHTML = "<code>" + JSON.stringify(JSON.parse(event.data), null, 4) + "</code>";
+            webhookList.appendChild(newWebhook);
+        };
     </script>
 
 </body>

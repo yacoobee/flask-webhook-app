@@ -1,0 +1,16 @@
+[
+    {
+        "event": "test_event",
+        "data": {
+            "id": "12345",
+            "message": "This is a test payload for the webhook from Equals money."
+        }
+    },
+    {
+        "event": "test_event",
+        "data": {
+            "id": "12345",
+            "message": "This is a test payload for the webhook from Equals money."
+        }
+    }
+]
