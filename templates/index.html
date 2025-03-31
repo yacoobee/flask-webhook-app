@@ -33,12 +33,12 @@
             padding: 10px;
             max-height: 400px;
             overflow-y: auto;
-            white-space: pre-wrap;  /* Ensures line breaks are respected */
+            white-space: pre-wrap;
         }
         .webhook-item {
             padding: 8px;
             border-bottom: 1px solid #ddd;
-            font-family: 'Courier New', monospace; /* Monospaced font for better readability */
+            font-family: 'Courier New', monospace;
         }
         .webhook-item code {
             background-color: #f4f4f4;
@@ -63,6 +63,7 @@
     <div id="webhook-list"></div>
 
     <script>
+        // Function to clear webhooks
         function clearWebhooks() {
             fetch('/clear', { method: 'POST' })
                 .then(response => response.json())
@@ -70,7 +71,7 @@
                     document.getElementById('webhook-list').innerHTML = "";
                     alert(data.message);
 
-                    // Stop and restart the event stream
+                    // Restart the event stream to reflect the cleared list
                     eventSource.close();
                     setTimeout(() => {
                         eventSource = new EventSource('/stream');
@@ -78,18 +79,17 @@
                             let webhookList = document.getElementById('webhook-list');
                             let newWebhook = document.createElement("div");
                             newWebhook.classList.add("webhook-item");
-
-                            // Format the JSON data for display
                             newWebhook.innerHTML = "<code>" + JSON.stringify(JSON.parse(event.data), null, 4) + "</code>";
-                            webhookList.appendChild(newWebhook);
+                            webhookList.prepend(newWebhook);  // Prepend to the top
                         };
                     }, 500);
 
-                    // Manually reload first webhook
-                    setTimeout(loadInitialWebhooks, 1000);
+                    // Reload webhooks after clearing
+                    loadInitialWebhooks();
                 });
         }
 
+        // Function to save webhooks to a text file
         function saveWebhooks() {
             fetch('/save', { method: 'POST' })
                 .then(response => response.blob())
@@ -103,6 +103,7 @@
                 });
         }
 
+        // Function to delete webhooks
         function deleteWebhooks() {
             fetch('/delete', { method: 'POST' })
                 .then(response => response.json())
@@ -112,6 +113,7 @@
                 });
         }
 
+        // Function to load the initial set of webhooks
         function loadInitialWebhooks() {
             fetch('/initial_webhooks')
                 .then(response => response.json())
@@ -122,27 +124,25 @@
                     data.webhooks.forEach(webhook => {
                         let newWebhook = document.createElement("div");
                         newWebhook.classList.add("webhook-item");
-
-                        // Format the JSON data for display
                         newWebhook.innerHTML = "<code>" + JSON.stringify(webhook, null, 4) + "</code>";
-                        webhookList.appendChild(newWebhook);
+                        webhookList.prepend(newWebhook);  // Prepend to the top
                     });
                 });
         }
 
-        // Load stored webhooks on page load
+        // Load the webhooks when the page loads
         loadInitialWebhooks();
 
-        // Live Updates using SSE
+        // Set up the SSE (Server-Sent Events) to listen for new webhooks
         const eventSource = new EventSource('/stream');
         eventSource.onmessage = function(event) {
             let webhookList = document.getElementById('webhook-list');
             let newWebhook = document.createElement("div");
             newWebhook.classList.add("webhook-item");
-
-            // Format the JSON data for display
             newWebhook.innerHTML = "<code>" + JSON.stringify(JSON.parse(event.data), null, 4) + "</code>";
-            webhookList.appendChild(newWebhook);
+
+            // Prepend the new webhook to the top of the list
+            webhookList.prepend(newWebhook);
         };
     </script>
 
