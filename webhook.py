@@ -44,7 +44,7 @@ def webhook():
         conn.close()
 
         print("Received JSON data:", data)
-        return jsonify({"message": "Success", "data": data}), 200
+        return jsonify({"message": "Success"}), 200
     else:
         return jsonify({"error": "Invalid request format, expected JSON"}), 400
 
